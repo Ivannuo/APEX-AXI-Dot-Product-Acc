@@ -1,35 +1,32 @@
 `timescale 1 ns / 1 ps
-//AXI Slave Module
+
 module AXI_APEX_slave_lite_v1_0_S00_AXI #
 (
     parameter integer C_S_AXI_DATA_WIDTH = 32,
     parameter integer C_S_AXI_ADDR_WIDTH = 5
 )
 (
-    input   wire                                S_AXI_ACLK    ,
-    input   wire                                S_AXI_ARESETN ,
-    input   wire [C_S_AXI_ADDR_WIDTH-1 : 0]     S_AXI_AWADDR  ,
-    input   wire [2 : 0]                        S_AXI_AWPROT  ,
-    input   wire                                S_AXI_AWVALID ,
-    output  wire                                S_AXI_AWREADY ,
-    input   wire [C_S_AXI_DATA_WIDTH-1 : 0]     S_AXI_WDATA   ,
-    input   wire [(C_S_AXI_DATA_WIDTH/8)-1 : 0] S_AXI_WSTRB   ,
-    input   wire                                S_AXI_WVALID  ,
-    output  wire                                S_AXI_WREADY  ,
-    output  wire [1 : 0]                        S_AXI_BRESP   ,
-    output  wire                                S_AXI_BVALID  ,
-    input   wire                                S_AXI_BREADY  ,
-    input   wire [C_S_AXI_ADDR_WIDTH-1 : 0]     S_AXI_ARADDR  ,
-    input   wire [2 : 0]                        S_AXI_ARPROT  ,
-    input   wire                                S_AXI_ARVALID ,
-    output  wire                                S_AXI_ARREADY ,
-    output  wire [C_S_AXI_DATA_WIDTH-1 : 0]     S_AXI_RDATA   ,
-    output  wire [1 : 0]                        S_AXI_RRESP   ,
-    output  wire                                S_AXI_RVALID  ,
-    input   wire                                S_AXI_RREADY  ,
-
-
-    // 6 Registers:
+    input wire  S_AXI_ACLK,
+    input wire  S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_AWADDR,
+    input wire [2 : 0] S_AXI_AWPROT,
+    input wire  S_AXI_AWVALID,
+    output wire  S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1 : 0] S_AXI_WSTRB,
+    input wire  S_AXI_WVALID,
+    output wire  S_AXI_WREADY,
+    output wire [1 : 0] S_AXI_BRESP,
+    output wire  S_AXI_BVALID,
+    input wire  S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1 : 0] S_AXI_ARADDR,// Read address (issued by master, acceped by Slave)
+    input wire [2 : 0] S_AXI_ARPROT,
+    input wire  S_AXI_ARVALID,
+    output wire  S_AXI_ARREADY,
+    output wire [C_S_AXI_DATA_WIDTH-1 : 0] S_AXI_RDATA,
+    output wire [1 : 0] S_AXI_RRESP,
+    output wire  S_AXI_RVALID,
+    input wire  S_AXI_RREADY,
     output wire [C_S_AXI_DATA_WIDTH-1:0] o_slv_reg0,
     output wire [C_S_AXI_DATA_WIDTH-1:0] o_slv_reg1,
     output wire [C_S_AXI_DATA_WIDTH-1:0] o_slv_reg2,
@@ -40,29 +37,33 @@ module AXI_APEX_slave_lite_v1_0_S00_AXI #
 );
 
 // AXI4LITE signals
-reg [C_S_AXI_ADDR_WIDTH-1 : 0] axi_awaddr ;
-reg                            axi_awready;
-reg                            axi_wready ;
-reg [1 : 0]                    axi_bresp  ;
-reg                            axi_bvalid ;
-reg [C_S_AXI_ADDR_WIDTH-1 : 0] axi_araddr ;
-reg                            axi_arready;
-reg [1 : 0]                    axi_rresp  ;
-reg                            axi_rvalid ;
+reg [C_S_AXI_ADDR_WIDTH-1 : 0] axi_awaddr;
+reg         axi_awready;
+reg         axi_wready;
+reg [1 : 0] axi_bresp;
+reg         axi_bvalid;
+reg [C_S_AXI_ADDR_WIDTH-1 : 0] axi_araddr;
+reg         axi_arready;
+reg [1 : 0] axi_rresp;
+reg         axi_rvalid;
 
-assign S_AXI_AWREADY = axi_awready  ;
-assign S_AXI_WREADY  = axi_wready   ;
-assign S_AXI_BRESP   = axi_bresp    ;
-assign S_AXI_BVALID  = axi_bvalid   ;
-assign S_AXI_ARREADY = axi_arready  ;
-assign S_AXI_RRESP   = axi_rresp    ;
-assign S_AXI_RVALID  = axi_rvalid   ;
+assign S_AXI_AWREADY = axi_awready;
+assign S_AXI_WREADY  = axi_wready;
+assign S_AXI_BRESP   = axi_bresp;
+assign S_AXI_BVALID  = axi_bvalid;
+assign S_AXI_ARREADY = axi_arready;
+assign S_AXI_RRESP   = axi_rresp;
+assign S_AXI_RVALID  = axi_rvalid;
 
+//======================================================================
 // localparam 
+//======================================================================
 localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32) + 1;
 localparam integer OPT_MEM_ADDR_BITS = 2;
 
+//======================================================================
 // 6 Registers
+//======================================================================
 reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg0;  // Control
 reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg1;  // A base
 reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg2;  // B base
@@ -72,9 +73,11 @@ reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg5;  // Status
 
 integer byte_index;
 
-// Write FSM
+//======================================================================
+// Write address and data channel: 1. AWVALID, 2. WVALID, 3. BREADY
+//======================================================================
 reg [1:0] state_write;
-localparam [1:0] Idle=2'b00, Waddr=2'b10, Wdata=2'b11; 
+localparam [1:0] Idle=2'b00, Waddr=2'b10, Wdata=2'b11; // 与官方相同
 
 always @(posedge S_AXI_ACLK) begin
   if (!S_AXI_ARESETN) begin
@@ -125,7 +128,9 @@ always @(posedge S_AXI_ACLK) begin
   end
 end
 
-// When S_AXI_WVALID=1, configurate slv_regX
+//======================================================================
+// Write data channel: 1. WVALID, 2. BREADY
+//======================================================================
 always @(posedge S_AXI_ACLK) begin
   if (!S_AXI_ARESETN) begin
     slv_reg0 <= 0;
@@ -187,14 +192,15 @@ always @(posedge S_AXI_ACLK) begin
           end
         end
         default: begin
-          // do nothing
         end
       endcase
     end
   end
 end
 
-// Read FSM
+//======================================================================
+// Read address and data channel: 1. ARVALID, 2. RREADY
+//======================================================================
 reg [1:0] state_read;
 localparam [1:0] Idle_r=2'b00, Raddr=2'b10, Rdata=2'b11;
 
@@ -231,7 +237,9 @@ always @(posedge S_AXI_ACLK) begin
   end
 end
 
-// Mapping Register Values to S_AXI_RDATA
+//======================================================================
+// Regitser Mappingg
+//======================================================================
 assign S_AXI_RDATA = 
   (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS : ADDR_LSB] == 3'h0) ? slv_reg0 :
   (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS : ADDR_LSB] == 3'h1) ? slv_reg1 :

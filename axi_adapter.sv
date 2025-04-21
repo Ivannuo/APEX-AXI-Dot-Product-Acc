@@ -6,7 +6,7 @@ module axi_adapter (
     input   wire            resetn             ,
     input   wire            read_req           ,
     input   wire    [31:0]  read_addr          ,
-    output  wire    [31:0]  read_data          ,
+    //output  wire    [31:0]  read_data          ,
     output  reg             read_data_valid    ,
     input   wire            write_req          ,
     input   wire    [31:0]  write_addr         ,
@@ -33,7 +33,7 @@ reg [2:0] state;
 localparam IDLE=0, READ=1, READ_WAIT=2, WRITE=3, WRITE_WAIT=4;
 
 assign M_AXI_ARADDR = read_addr;
-assign read_data = M_AXI_RDATA;
+//assign read_data = M_AXI_RDATA;
 
 always @(posedge clk) begin
     if (!resetn) begin

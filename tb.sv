@@ -1,6 +1,4 @@
-
 `timescale 1ns / 1ps
-
 module tb_dot_product;
 
 reg clk = 0;
@@ -9,18 +7,18 @@ reg rstn = 0;
 // Clock generation
 always #5 clk = ~clk;
 
-// AXI-Lite interface
+// --------------------- AXI-Lite Master Interface ---------------------
 reg [4:0] S_AXI_AWADDR;
 reg [2:0] S_AXI_AWPROT = 0;
 reg       S_AXI_AWVALID = 0;
-wire      S_AXI_AWREADY;// Write address ready. This signal indicates that the slave is ready to accept an address and associated control signals.
-reg [31:0] S_AXI_WDATA;// Write address valid. This signal indicates that the master signaling valid write address and control information.
+wire      S_AXI_AWREADY;
+reg [31:0] S_AXI_WDATA;
 reg [3:0]  S_AXI_WSTRB = 4'hF;
 reg        S_AXI_WVALID = 0;
-wire       S_AXI_WREADY;// Write ready. This signal indicates that the slave can accept the write data.
+wire       S_AXI_WREADY;
 wire [1:0] S_AXI_BRESP;
 wire       S_AXI_BVALID;
-reg        S_AXI_BREADY = 1;// Response ready. This signal indicates that the master can accept a write response.
+reg        S_AXI_BREADY = 1;
 reg [4:0]  S_AXI_ARADDR;
 reg [2:0]  S_AXI_ARPROT = 0;
 reg        S_AXI_ARVALID = 0;
@@ -30,7 +28,7 @@ wire [1:0]  S_AXI_RRESP;
 wire        S_AXI_RVALID;
 reg         S_AXI_RREADY = 1;
 
-// AXI Master interface
+// --------------------- AXI Master Interface ---------------------
 wire [31:0] M_AXI_AWADDR;
 wire        M_AXI_AWVALID;
 reg         M_AXI_AWREADY = 1;
@@ -49,10 +47,10 @@ reg         M_AXI_RVALID = 0;
 wire        M_AXI_RREADY;
 reg  [1:0]  M_AXI_RRESP = 0;
 
-// Memory model
+// --------------------- Memory model ---------------------
 reg [31:0] mem [0:255];
 
-// Connect DUT
+// --------------------- DUT Instance ---------------------
 dot_product_top dut (
     .S_AXI_ACLK(clk),
     .S_AXI_ARESETN(rstn),
@@ -96,12 +94,12 @@ dot_product_top dut (
     .M_AXI_RRESP(M_AXI_RRESP)
 );
 
-// AXI-Lite write task
+// --------------------- AXI-Lite Write Task ---------------------
 task axi_lite_write(input [4:0] addr, input [31:0] data);
 begin
     @(posedge clk);
-    S_AXI_AWADDR <= addr << 2;
-    S_AXI_WDATA  <= data;
+    S_AXI_AWADDR  <= addr << 2;
+    S_AXI_WDATA   <= data;
     S_AXI_AWVALID <= 1;
     S_AXI_WVALID  <= 1;
     wait (S_AXI_AWREADY && S_AXI_WREADY);
@@ -111,27 +109,7 @@ begin
 end
 endtask
 
-// Correct Result of Dot Product
-integer base_a = 16;
-integer base_b = 17;
-integer length = 4;
-integer output_addr = 32;
-
-function [31:0] expected_dot_product;
-    input integer base_a;
-    input integer base_b;
-    input integer length;
-    integer i;
-    begin
-        expected_dot_product = 0;
-        for (i = 0; i < length; i = i + 1) begin
-            expected_dot_product = expected_dot_product + $signed(mem[base_a + 2*i] * mem[base_b + 2*i]);
-        end
-    end
-endfunction
-
-
-// Memory read/write responder
+// --------------------- AXI Memory Read/Write Simulation ---------------------
 always @(posedge clk) begin
     if (M_AXI_ARVALID) begin
         M_AXI_RVALID <= 1;
@@ -148,43 +126,71 @@ always @(posedge clk) begin
     end
 end
 
-// Test
+// --------------------- Verification Task ---------------------
+task verify_dot_product(input integer baseA, input integer baseB, input integer out_addr, input integer len);
+    integer i;
+    integer result;
+begin
+    result = 0;
+    for (i = 0; i < len; i = i + 1) begin
+        result = result + $signed(mem[baseA + 2*i]) * $signed(mem[baseB + 2*i]);
+    end
+    $display("Result in memory[%0d] = %0d", out_addr, $signed(mem[out_addr]));
+    if ($signed(mem[out_addr]) !== result) begin
+        $display("Dot product incorrect! Expect: %0d", result);
+        $fatal;
+    end else begin
+        $display("Dot product correct!");
+    end
+end
+endtask
+
+// --------------------- Main Test Sequence ---------------------
 initial begin
-    $display("Start testbench...");
+    $display("Starting testbench...");
     rstn = 0;
     repeat(5) @(posedge clk);
     rstn = 1;
 
-    // Preload memory A and B
-    mem[16] = 32'sd3; // A[0]
-    mem[17] = 32'sd4; // B[0]
-    mem[18] = -32'sd5; // A[1]
-    mem[19] = 32'sd6; // B[1]
-    mem[20] = -32'sd7;
-    mem[21] = 32'sd8;
-    mem[22] = 32'sd9;
-    mem[23] = 32'sd10;
+    // ==== Test 1: Single Mode ====
+    mem[16] = 3;
+    mem[17] = 4;
+    mem[18] = -5;
+    mem[19] = 6;
+    mem[20] = 7;
+    mem[21] = -8;
 
-    // AXI-Lite config
-    axi_lite_write(5'd1, 16*4); // A address
-    axi_lite_write(5'd2, 17*4); // B address
-    axi_lite_write(5'd3, 4);    // length = 4
-    axi_lite_write(5'd4, 32*4); // output address
-    axi_lite_write(5'd0, 32'h1); // start
+    axi_lite_write(5'd1, 16*4); // A base
+    axi_lite_write(5'd2, 17*4); // B base
+    axi_lite_write(5'd3, 3);    // length
+    axi_lite_write(5'd4, 32*4); // output
+    axi_lite_write(5'd0, 32'h1);// control: start, single
 
-    // Wait
     #500;
-    
-    // Show results
-    $display("Result in memory[%0d] = %d", output_addr, mem[output_addr]);
-        if (mem[output_addr] !== expected_dot_product(base_a, base_b, length)) begin
-            $fatal("Dot product incorrect!Should be %d.",expected_dot_product(base_a, base_b, length));
-        end else begin
-            $display("Dot product correct!");
-    end
+    verify_dot_product(16, 17, 32, 3);
 
-    #100;
+    // Clear Control Signal
+    axi_lite_write(5'd0, 32'h0);// control: start, single
 
+    // ==== Test 2: Burst Mode ====
+    mem[40] = 1;
+    mem[41] = -2;
+    mem[42] = 3;
+    mem[43] = 4;
+    mem[44] = -5;
+    mem[45] = 6;
+
+    axi_lite_write(5'd1, 40*4); // A base
+    axi_lite_write(5'd2, 41*4); // B base
+    axi_lite_write(5'd3, 3);    // length
+    axi_lite_write(5'd4, 48*4); // output
+    axi_lite_write(5'd0, 32'h3);// control: start + burst
+
+    #400;
+    verify_dot_product(40, 41, 48, 3);
+
+    $display("All tests passed!");
     $finish;
 end
+
 endmodule
